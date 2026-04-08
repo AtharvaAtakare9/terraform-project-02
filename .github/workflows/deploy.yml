@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  deploy:
+  plan:
     runs-on: ubuntu-latest
 
     defaults:
@@ -14,21 +14,36 @@ jobs:
         working-directory: envs/dev
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v4
-
-      - name: Configure AWS
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Terraform Init
-        run: terraform init
+      - run: terraform init
+      - run: terraform plan
 
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
+  apply:
+    needs: plan
+    runs-on: ubuntu-latest
+    environment: production   # 👈 approval
+
+    defaults:
+      run:
+        working-directory: envs/dev
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - run: terraform init
+      - run: terraform apply -auto-approve
